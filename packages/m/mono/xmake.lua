@@ -11,6 +11,10 @@ package("mono")
 
     add_includedirs("include", "include/mono-2.0", "include/mono")
 
+    if is_plat("windows") then
+        add_syslinks("bcrypt.lib", "Mswsock.lib", "ws2_32.lib", "ole32.lib", "oleaut32.lib", "psapi.lib", "version.lib", "advapi32.lib", "winmm.lib", "kernel32.lib", "user32.lib", "gdi32.lib", "winspool.lib", "comdlg32.lib", "shell32.lib", "uuid.lib", "odbc32.lib", "odbccp32.lib")
+    end
+
     on_install("macosx", "linux", function (package)
         local configs = {"--disable-silent-rules", "--enable-nls=no"}
         import("package.tools.autoconf").install(package, configs)
@@ -53,8 +57,6 @@ package("mono")
         os.cp(path.join(lib_path, "*.lib"), package:installdir("lib"))
         os.cp(path.join(bin_path, "*.dll"), package:installdir("bin"))
         os.cp(include_path, package:installdir("include"))
-
-        add_syslinks("bcrypt.lib", "Mswsock.lib", "ws2_32.lib", "ole32.lib", "oleaut32.lib", "psapi.lib", "version.lib", "advapi32.lib", "winmm.lib", "kernel32.lib", "user32.lib", "gdi32.lib", "winspool.lib", "comdlg32.lib", "shell32.lib", "uuid.lib", "odbc32.lib", "odbccp32.lib")
     end)
 
     on_test(function (package)
