@@ -5,8 +5,8 @@ package("mono")
 
     set_urls("https://github.com/mono/mono.git")
 
-    add_versions("mono-6.8.0.123")
-    add_versions("mono-6.12.0.190")
+    add_versions("6.8.0.123", "mono-6.8.0.123")
+    add_versions("6.12.0.190", "mono-6.12.0.190")
 
     add_includedirs("include/mono-2.0")
 
