@@ -54,7 +54,7 @@ package("mono")
         os.cp(path.join(bin_path, "*.dll"), package:installdir("bin"))
         os.cp(include_path, package:installdir("include"))
 
-        package:add_syslinks("bcrypt.lib", "Mswsock.lib", "ws2_32.lib", "ole32.lib", "oleaut32.lib", "psapi.lib", "version.lib", "advapi32.lib", "winmm.lib", "kernel32.lib", "user32.lib", "gdi32.lib", "winspool.lib", "comdlg32.lib", "shell32.lib", "uuid.lib", "odbc32.lib", "odbccp32.lib")
+        add_syslinks("bcrypt.lib", "Mswsock.lib", "ws2_32.lib", "ole32.lib", "oleaut32.lib", "psapi.lib", "version.lib", "advapi32.lib", "winmm.lib", "kernel32.lib", "user32.lib", "gdi32.lib", "winspool.lib", "comdlg32.lib", "shell32.lib", "uuid.lib", "odbc32.lib", "odbccp32.lib")
     end)
 
     on_test(function (package)
