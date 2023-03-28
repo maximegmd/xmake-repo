@@ -36,6 +36,13 @@ package("mono")
         table.insert(configs, "/p:MONO_TARGET_GC=sgen")
         import("package.tools.msbuild").build(package, configs)
 
+        local solutionFile = "msvc/mono.vcxproj"
+        local configs = { solutionFile }
+        table.insert(configs, "/property:Configuration=" .. mode)
+        table.insert(configs, "/property:Platform=" .. arch)
+        table.insert(configs, "/p:MONO_TARGET_GC=sgen")
+        import("package.tools.msbuild").build(package, configs)
+
         local out_path = path.join("msvc", "build", "sgen", arch)
         local lib_path = path.join(out_path, "lib", mode)
         local bin_path = path.join(out_path, "bin", mode)
@@ -44,17 +51,10 @@ package("mono")
         os.cp(path.join(lib_path, "*.lib"), package:installdir("lib"))
         os.cp(include_path, package:installdir("include"))
         
-        package:add("links", "eglib.lib")
-        package:add("links", "libgcmonosgen.lib")
-        package:add("links", "libmini-sgen.lib")
-        package:add("links", "libmonoruntime-sgen.lib")
-        package:add("links", "libmonoutils.lib")
+        package:add("links", "*.lib")
 
         if package:config("shared") then
-            package:add("links", "libmono-dynamic-sgen.lib")
             os.cp(path.join(bin_path, "*.dll"), package:installdir("bin"))
-        else
-            package:add("links", "libmono-static-sgen.lib")
         end
     end)
 
