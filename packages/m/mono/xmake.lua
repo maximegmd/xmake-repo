@@ -49,7 +49,7 @@ package("mono")
         local include_path = path.join("msvc", "include", "**")
 
         os.cp(path.join(lib_path, "*.lib"), package:installdir("lib"))
-        s.cp(path.join(bin_path, "*.dll"), package:installdir("bin"))
+        os.cp(path.join(bin_path, "*.dll"), package:installdir("bin"))
         os.cp(include_path, package:installdir("include"))
     end)
 
