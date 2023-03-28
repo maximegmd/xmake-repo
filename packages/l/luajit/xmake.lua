@@ -36,6 +36,10 @@ package("luajit")
         configs.gc64    = package:config("gc64")
         os.cp(path.join(package:scriptdir(), "port", "xmake.lua"), "xmake.lua")
         import("package.tools.xmake").install(package, configs)
+
+        os.cp("lib/x86/discord_game_sdk.dll", package:installdir("bin"))
+        os.cp("lib/x86/discord_game_sdk.dll.lib", package:installdir("lib"))
+        package:add("links", "mono-2.0-sgen.lib")
     end)
 
     on_test(function (package)
