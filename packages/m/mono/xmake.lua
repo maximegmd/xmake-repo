@@ -7,12 +7,26 @@ package("mono")
              {version = function (version) return version:gsub("%+", ".") end})
 
     add_versions("6.8.0+123", "e2e42d36e19f083fc0d82f6c02f7db80611d69767112af353df2f279744a2ac5")
+    add_versions("6.12.0+182", "57366a6ab4f3b5ecf111d48548031615b3a100db87c679fc006e8c8a4efd9424")
 
     add_includedirs("include/mono-2.0")
 
     on_install("macosx", "linux", function (package)
         local configs = {"--disable-silent-rules", "--enable-nls=no"}
         import("package.tools.autoconf").install(package, configs)
+    end)
+
+    on_install("windows", function (package)
+        import("core.tool.toolchain")
+
+        local solutionFile = "msvc/mono.sln"
+        local arch = package:is_arch("x86") and "Win32" or "x64"
+        local mode = package:debug() and "Debug" or "Release"
+        local configs = {solutionFile}
+        table.insert(configs, "/property:Configuration=" .. mode)
+        table.insert(configs, "/property:Platform=" .. arch)
+        table.insert(configs, "/p:MONO_TARGET_GC=sgen")
+        import("package.tools.msbuild").build(package, configs)
     end)
 
     on_test(function (package)
