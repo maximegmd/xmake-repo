@@ -3,11 +3,10 @@ package("mono")
     set_homepage("https://www.mono-project.com/")
     set_description("Cross platform, open source .NET development framework")
 
-    set_urls("https://download.mono-project.com/sources/mono/mono-$(version).tar.xz",
-             {version = function (version) return version:gsub("%+", ".") end})
+    set_urls("https://github.com/mono/mono.git")
 
-    add_versions("6.8.0+123", "e2e42d36e19f083fc0d82f6c02f7db80611d69767112af353df2f279744a2ac5")
-    add_versions("6.12.0+182", "57366a6ab4f3b5ecf111d48548031615b3a100db87c679fc006e8c8a4efd9424")
+    add_versions("mono-6.8.0.123")
+    add_versions("mono-6.12.0.190")
 
     add_includedirs("include/mono-2.0")
 
