@@ -18,6 +18,8 @@ package("mono")
 
     on_install("windows", function (package)
         import("core.tool.toolchain")
+        
+         os.cp(path.join(package:scriptdir(), "xmake", "mono.external.targets"), "msvc/mono.external.targets")
 
         local solutionFile = "msvc/mono.sln"
         local arch = package:is_arch("x86") and "Win32" or "x64"
