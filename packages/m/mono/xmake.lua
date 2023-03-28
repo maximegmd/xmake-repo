@@ -34,6 +34,7 @@ package("mono")
         table.insert(configs, "/property:Configuration=" .. mode)
         table.insert(configs, "/property:Platform=" .. arch)
         table.insert(configs, "/p:MONO_TARGET_GC=sgen")
+        table.insert(configs, "/p:MONO_C_RUNTIME=/MT")
         import("package.tools.msbuild").build(package, configs)
 
         local solutionFile = "msvc/mono.vcxproj"
@@ -41,6 +42,7 @@ package("mono")
         table.insert(configs, "/property:Configuration=" .. mode)
         table.insert(configs, "/property:Platform=" .. arch)
         table.insert(configs, "/p:MONO_TARGET_GC=sgen")
+        table.insert(configs, "/p:MONO_C_RUNTIME=/MT")
         import("package.tools.msbuild").build(package, configs)
 
         local out_path = path.join("msvc", "build", "sgen", arch)
@@ -51,6 +53,8 @@ package("mono")
         os.cp(path.join(lib_path, "*.lib"), package:installdir("lib"))
         os.cp(path.join(bin_path, "*.dll"), package:installdir("bin"))
         os.cp(include_path, package:installdir("include"))
+
+        package:add_syslinks("bcrypt.lib", "Mswsock.lib", "ws2_32.lib", "ole32.lib", "oleaut32.lib", "psapi.lib", "version.lib", "advapi32.lib", "winmm.lib", "kernel32.lib", "user32.lib", "gdi32.lib", "winspool.lib", "comdlg32.lib", "shell32.lib", "uuid.lib", "odbc32.lib", "odbccp32.lib")
     end)
 
     on_test(function (package)
