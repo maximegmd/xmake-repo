@@ -12,7 +12,7 @@ package("mono")
     add_includedirs("include", "include/mono-2.0", "include/mono")
 
     if is_plat("windows") then
-        add_syslinks("bcrypt.lib", "Mswsock.lib", "ws2_32.lib", "ole32.lib", "oleaut32.lib", "psapi.lib", "version.lib", "advapi32.lib", "winmm.lib", "kernel32.lib", "user32.lib", "gdi32.lib", "winspool.lib", "comdlg32.lib", "shell32.lib", "uuid.lib", "odbc32.lib", "odbccp32.lib")
+        add_syslinks("bcrypt", "Mswsock", "ws2_32", "ole32", "oleaut32", "psapi", "version", "advapi32", "winmm", "kernel32", "user32", "gdi32", "winspool", "comdlg32", "shell32", "uuid", "odbc32", "odbccp32", "user32")
     end
 
     on_install("macosx", "linux", function (package)
