@@ -27,10 +27,10 @@ package("mono")
         os.cp(path.join(src_path, "mono", "mini", "*"), path.join("mono", "mini"))
         os.cp(path.join(src_path, "mono", "utils", "*"), path.join("mono", "utils"))
 
-        local solutionFile = "msvc/mono.vcxproj"
+        local solutionFile = package:config("shared") and "msvc/libmono-dynamic.vcxproj" or "msvc/libmono-static.vcxproj"
         local arch = package:is_arch("x86") and "Win32" or "x64"
         local mode = package:debug() and "Debug" or "Release"
-        local configs = {solutionFile}
+        local configs = { solutionFile }
         table.insert(configs, "/property:Configuration=" .. mode)
         table.insert(configs, "/property:Platform=" .. arch)
         table.insert(configs, "/p:MONO_TARGET_GC=sgen")
@@ -41,11 +41,21 @@ package("mono")
         local bin_path = path.join(out_path, "bin", mode)
         local include_path = path.join("msvc", "include", "**")
 
-        os.cp(path.join(bin_path, "mono-2.0-sgen.dll"), package:installdir("bin"))
-        os.cp(path.join(lib_path, "mono-2.0-sgen.lib"), package:installdir("lib"))
+        os.cp(path.join(lib_path, "*.lib"), package:installdir("lib"))
         os.cp(include_path, package:installdir("include"))
         
-        package:add("links", "mono-2.0-sgen.lib")
+        package:add("links", "eglib.lib")
+        package:add("links", "libgcmonosgen.lib")
+        package:add("links", "libmini-sgen.lib")
+        package:add("links", "libmonoruntime-sgen.lib")
+        package:add("links", "libmonoutils.lib")
+
+        if package:config("shared") then
+            package:add("links", "libmono-dynamic-sgen.lib")
+            os.cp(path.join(bin_path, "*.dll"), package:installdir("bin"))
+        else
+            package:add("links", "libmono-static-sgen.lib")
+        end
     end)
 
     on_test(function (package)
