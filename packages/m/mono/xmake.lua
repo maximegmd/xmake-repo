@@ -34,7 +34,7 @@ package("mono")
         table.insert(configs, "/property:Configuration=" .. mode)
         table.insert(configs, "/property:Platform=" .. arch)
         table.insert(configs, "/p:MONO_TARGET_GC=sgen")
-        table.insert(configs, "/p:MONO_C_RUNTIME=MT")
+        table.insert(configs, "/p:MONO_C_RUNTIME=MultiThreaded")
         import("package.tools.msbuild").build(package, configs)
 
         local solutionFile = "msvc/mono.vcxproj"
@@ -42,7 +42,7 @@ package("mono")
         table.insert(configs, "/property:Configuration=" .. mode)
         table.insert(configs, "/property:Platform=" .. arch)
         table.insert(configs, "/p:MONO_TARGET_GC=sgen")
-        table.insert(configs, "/p:MONO_C_RUNTIME=MT")
+        table.insert(configs, "/p:MONO_C_RUNTIME=MultiThreaded")
         import("package.tools.msbuild").build(package, configs)
 
         local out_path = path.join("msvc", "build", "sgen", arch)
