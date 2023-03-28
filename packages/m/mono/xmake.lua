@@ -49,21 +49,8 @@ package("mono")
         local include_path = path.join("msvc", "include", "**")
 
         os.cp(path.join(lib_path, "*.lib"), package:installdir("lib"))
+        s.cp(path.join(bin_path, "*.dll"), package:installdir("bin"))
         os.cp(include_path, package:installdir("include"))
-        
-        package:add("links", "eglib.lib")
-        package:add("links", "libgcmonosgen.lib")
-        package:add("links", "libmini-sgen.lib")
-        package:add("links", "libmonoruntime-sgen.lib")
-        package:add("links", "libmonoutils.lib")
-        package:add("links", "mono-2.0-sgen.lib")
-
-        if package:config("shared") then
-            os.cp(path.join(bin_path, "*.dll"), package:installdir("bin"))
-            package:add("links", "libmono-dynamic-sgen.lib")
-        else
-            package:add("links", "libmono-static-sgen.lib")
-        end
     end)
 
     on_test(function (package)
