@@ -1,0 +1,3 @@
+#define CONFIG_SOURCEVERSION "commit: ${GIT_TAG}${GIT_COMMIT_LONG}"
+${define HAVE_STRDUP}
+${define HAVE_STRNDUP}

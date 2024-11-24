@@ -6,15 +6,25 @@ package("fast_float")
 
     add_urls("https://github.com/fastfloat/fast_float/archive/refs/tags/$(version).tar.gz",
              "https://github.com/fastfloat/fast_float.git")
-    add_versions("v3.5.1", "8558bf9c66ccd2f7d03c94461a107f49ad9cf6e4f6c0c84e148fec0aa32b4dd9")
     add_versions("v3.4.0", "a242877d2fae81ca412033f5ebf5dbc43cb029c56b4af78e33106b9a69f8f58e")
+    add_versions("v3.5.1", "8558bf9c66ccd2f7d03c94461a107f49ad9cf6e4f6c0c84e148fec0aa32b4dd9")
     add_versions("v3.10.1", "d162c21c1dc538dbc6b3bb6d1317a7808f2eccef78638445630533f5bed902ee")
+    add_versions("v5.2.0", "72bbfd1914e414c920e39abdc81378adf910a622b62c45b4c61d344039425d18")
+    add_versions("v5.3.0", "2f3bc50670455534dcaedc9dcd0517b71152f319d0cec8625f21c51d23eaf4b9")
+    add_versions("v6.0.0", "7e98671ef4cc7ed7f44b3b13f80156c8d2d9244fac55deace28bd05b0a2c7c8e")
+    add_versions("v6.1.0", "a9c8ca8ca7d68c2dbb134434044f9c66cfd4c383d5e85c36b704d30f6be82506")
+    add_versions("v6.1.1", "10159a4a58ba95fe9389c3c97fe7de9a543622aa0dcc12dd9356d755e9a94cb4")
+    add_versions("v6.1.3", "7dd99cc2ff44e07dc2a42bed0c6b8c4a8ee4e3b1c330f77073b6cfdb48724c8e")
+    add_versions("v6.1.4", "12cb6d250824160ca16bcb9d51f0ca7693d0d10cb444f34f1093bc02acfce704")
+    add_versions("v6.1.5", "597126ff5edc3ee59d502c210ded229401a30dafecb96a513135e9719fcad55f")
+    add_versions("v6.1.6", "4458aae4b0eb55717968edda42987cabf5f7fc737aee8fede87a70035dba9ab0")
 
     if is_plat("wasm") then
         add_patches("v3.4.0", path.join(os.scriptdir(), "patches", "emscripten_fix.patch"), "482705431f67e6f0a375ed7bfe87d6856e7d13f071db6157e1d5659834b0eb50")
     end
 
     add_deps("cmake")
+
     on_install(function (package)
         import("package.tools.cmake").install(package)
     end)
@@ -22,9 +32,9 @@ package("fast_float")
     on_test(function (package)
         assert(package:check_cxxsnippets({test = [[
             void test() {
-                const std::string input =  "3.1416 xyz ";
+                const std::string input = "3.1416 xyz ";
                 double result;
-                auto answer = fast_float::from_chars(input.data(), input.data()+input.size(), result);
+                auto answer = fast_float::from_chars(input.data(), input.data() + input.size(), result);
             }
-        ]]}, {configs = {languages = "c++11"}, includes = {"fast_float/fast_float.h"}}))
+        ]]}, {configs = {languages = "c++14"}, includes = {"fast_float/fast_float.h"}}))
     end)

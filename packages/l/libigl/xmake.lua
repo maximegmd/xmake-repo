@@ -4,17 +4,19 @@ package("libigl")
     set_description("Simple C++ geometry processing library.")
     set_license("MPL-2.0")
 
-    add_urls("https://github.com/libigl/libigl/archive/$(version).tar.gz",
+    add_urls("https://github.com/libigl/libigl/archive/refs/tags/$(version).tar.gz",
              "https://github.com/libigl/libigl.git")
     add_versions("v2.2.0", "b336e548d718536956e2d6958a0624bc76d50be99039454072ecdc5cf1b2ede5")
     add_versions("v2.3.0", "9d6de3bdb9c1cfc61a0a0616fd96d14ef8465995600328c196fa672ee4579b70")
     add_versions("v2.4.0", "f3f53ee6f1e9a6c529378c6b0439cd2cfc0e30b2178b483fe6bea169ce6deb22")
+    add_versions("v2.5.0", "1d9d8c3a3a6a269cf22612bbe24d7fd1c5f84838231d299d712969ad294f945f")
 
     add_resources("2.x", "libigl_imgui", "https://github.com/libigl/libigl-imgui.git", "7e1053e750b0f4c129b046f4e455243cb7f804f3")
 
     add_configs("header_only", {description = "Use header only version.", default = true, type = "boolean"})
     add_configs("cgal", {description = "Use CGAL library.", default = false, type = "boolean"})
     add_configs("imgui", {description = "Use imgui with libigl.", default = false, type = "boolean"})
+    add_configs("embree", {description = "Use embree library.", default = false, type = "boolean"})
 
     if is_plat("windows") then
         add_syslinks("comdlg32")
@@ -24,7 +26,9 @@ package("libigl")
 
     add_deps("cmake", "eigen")
     on_load("macosx", "linux", "windows", "mingw", function (package)
-        if not package:config("header_only") then
+        if package:config("header_only") then
+            package:set("kind", "library", {headeronly = true})
+        else
             raise("Non-header-only version is not supported yet!")
         end
         if package:config("cgal") then
@@ -32,6 +36,10 @@ package("libigl")
         end
         if package:config("imgui") then
             package:add("deps", "imgui", {configs = {glfw_opengl3 = true}})
+            package:add("deps", "glad")
+        end
+        if package:config("embree") then
+            package:add("deps", "embree")
         end
     end)
 
@@ -71,4 +79,32 @@ package("libigl")
                 igl::cotmatrix(V,F,L);
             }
         ]]}, {configs = {languages = "c++14"}, includes = {"igl/cotmatrix.h", "Eigen/Dense", "Eigen/Sparse"}}))
+
+        if package:config("imgui") then 
+            assert(package:check_cxxsnippets({test = [[
+                void test() {
+                    Eigen::MatrixXd V;
+                    Eigen::MatrixXi F;
+                    igl::opengl::glfw::Viewer viewer;
+                    viewer.data().set_mesh(V, F);
+                    viewer.launch();
+                }
+            ]]}, {configs = {languages = "c++14"}, includes = {"igl/opengl/glfw/Viewer.h", "Eigen/Dense", "Eigen/Sparse"}}))
+        end
+
+        if package:config("embree") then
+            assert(package:check_cxxsnippets({test = [[
+                void test() {
+                    Eigen::MatrixXf V;
+                    Eigen::MatrixXi F;
+                    igl::embree::EmbreeIntersector ei;
+                    ei.init(V,F);
+
+                    igl::Hit hit{};
+                    Eigen::Vector3f look_from{1.0f, 1.0f, 1.0f}, dir{1.0f, 1.0f, 1.0f};
+                    bool is_hit = ei.intersectRay(look_from, dir, hit);
+                }
+            ]]}, {configs = {languages = "c++14"}, includes = {"igl/embree/EmbreeIntersector.h", "igl/Hit.h", "Eigen/Dense", "Eigen/Sparse"}}))
+        end
+
     end)

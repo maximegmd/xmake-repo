@@ -1,49 +1,101 @@
 package("mysql")
+    set_homepage("http://www.mysql.com")
+    set_description("A real-time, open source transactional database.")
+    set_license("GPL-2.0")
 
-    set_homepage("https://dev.mysql.com/doc/refman/5.7/en/")
-    set_description("Open source relational database management system.")
+    add_urls("https://github.com/mysql/mysql-server/archive/refs/tags/mysql-$(version).tar.gz")
 
-    set_urls("https://cdn.mysql.com/archives/mysql-5.7/mysql-boost-$(version).tar.gz",
-             "https://github.com/xmake-mirror/mysql-boost/releases/download/$(version)/mysql-boost-$(version).tar.gz")
+    add_versions("8.0.39", "3a72e6af758236374764b7a1d682f7ab94c70ed0d00bf0cb0f7dd728352b6d96")
 
-    add_versions("5.7.29", "00f514124de2bad1ba7b380cbbd46e316cae7fc7bc3a5621456cabf352f27978")
-
-    if is_plat("macosx", "linux") then
-        add_deps("cmake", "openssl")
-        if is_plat("linux") then
-            add_deps("ncurses")
-        end
+    add_configs("server", {description = "Build server", default = false, type = "boolean"})
+    add_configs("curl", {description = "Build with curl", default = false, type = "boolean"})
+    add_configs("kerberos", {description = "Build with kerberos", default = false, type = "boolean"})
+    add_configs("fido", {description = "Build FIDO based authentication plugins", default = false, type = "boolean"})
+    add_configs("x", {description = "Build MySQL X plugin", default = false, type = "boolean"})
+    if is_plat("windows") then
+        add_configs("debug", {description = "Enable debug symbols.", default = false, readonly = true})
     end
-    add_includedirs("include/mysql")
 
-    on_install("macosx", "linux", function (package)
-        -- https://bugs.mysql.com/bug.php?id=87348
-        -- Fixes: "ADD_SUBDIRECTORY given source
-        -- 'storage/ndb' which is not an existing"
-        io.gsub("CMakeLists.txt", "ADD_SUBDIRECTORY%(storage/ndb%)", "")
-        local configs = { "-DCOMPILATION_COMMENT=XMake",
-                          "-DDEFAULT_CHARSET=utf8",
-                          "-DDEFAULT_COLLATION=utf8_general_ci",
-                          "-DINSTALL_DOCDIR=share/doc/#{name}",
-                          "-DINSTALL_INCLUDEDIR=include/mysql",
-                          "-DINSTALL_INFODIR=share/info",
-                          "-DINSTALL_MANDIR=share/man",
-                          "-DINSTALL_MYSQLSHAREDIR=share/mysql",
-                          "-DWITH_BOOST=../boost",
-                          "-DWITH_EDITLINE=" .. (is_plat("macosx") and "system" or "bundled"),
-                          "-DWITH_SSL=yes",
-                          "-DWITH_UNIT_TESTS=OFF",
-                          "-DWITHOUT_SERVER=ON"}
-        if package:is_plat("linux") then
-            local curses = package:dep("ncurses"):fetch()
-            if curses then
-                local includedirs = table.wrap(curses.sysincludedirs or curses.includedirs)
-                local libfiles = table.wrap(curses.libfiles)
-                table.insert(configs, "-DCURSES_INCLUDE_PATH=" .. table.concat(includedirs, ";"))
-                table.insert(configs, "-DCURSES_LIBRARY=" .. table.concat(libfiles, ";"))
+    add_includedirs("include", "include/mysql")
+
+    add_deps("cmake")
+    add_deps("zlib", "zstd", "lz4", "openssl", "rapidjson")
+    if is_plat("linux") then
+        add_deps("patchelf")
+        add_deps("libedit", {configs = {terminal_db = "ncurses"}})
+    end
+
+    if on_check then
+        on_check(function (package)
+            local version = package:version()
+            if version:ge("9.0.0") then
+                assert(package:is_arch(".*64"), "package(mysql) supports only 64-bit platforms.")
+                assert(not package:is_plat("macosx"), "package(mysql >=9.0.0) need c++20 compiler")
             end
+        end)
+    end
+
+    on_load(function(package)
+        local version = package:version()
+        if version:lt("9.0.0") then
+            package:add("deps", "boost", "libevent")
+        end
+
+        if package:config("server") then
+            package:add("deps", "icu4c", "protobuf-cpp")
+        end
+
+        if package:config("fido") then
+            -- TODO: patch cmakelists to find our fido or let it use system libfido2
+            package:add("deps", "libfido2")
+        end
+
+        if package:config("curl") then
+            package:add("deps", "libcurl")
+        end
+
+        if package:config("kerberos") then
+            package:add("deps", "krb5")
+        end
+
+        if package:is_cross() then
+            package:add("deps", "mysql-build-tools")
+            package:add("patches", "8.0.39", "patches/8.0.39/cmake-cross-compilation.patch", "0f951afce6bcbc5b053d4e7e4aef57f602ff89960d230354f36385ca31c1c7a5")
+        end
+    end)
+
+    on_install("windows", "macosx", "linux", function (package)
+        import("patch").cmake(package)
+
+        local configs = import("configs").get(package, false)
+        table.insert(configs, "-DCMAKE_BUILD_TYPE=" .. (package:is_debug() and "Debug" or "Release"))
+        table.insert(configs, "-DBUILD_SHARED_LIBS=" .. (package:config("shared") and "ON" or "OFF"))
+        table.insert(configs, "-DINSTALL_STATIC_LIBRARIES=" .. (package:config("shared") and "OFF" or "ON"))
+        table.insert(configs, "-DWITH_LTO=" .. (package:config("lto") and "ON" or "OFF"))
+        table.insert(configs, "-DWITH_ASAN=" .. (package:config("asan") and "ON" or "OFF"))
+        table.insert(configs, "-DWITH_LSAN=" .. (package:config("lsan") and "ON" or "OFF"))
+        table.insert(configs, "-DWITH_MSAN=" .. (package:config("msan") and "ON" or "OFF"))
+        table.insert(configs, "-DWITH_UBSAN=" .. (package:config("ubsan") and "ON" or "OFF"))
+        if package:is_plat("windows") then
+            table.insert(configs, "-DLINK_STATIC_RUNTIME_LIBRARIES=" .. (package:has_runtime("MT", "MTd") and "ON" or "OFF"))
         end
         import("package.tools.cmake").install(package, configs)
+
+        if package:is_plat("windows") then
+            if package:config("shared") then
+                os.tryrm(package:installdir("lib/mysqlclient.lib"))
+                os.trymv(package:installdir("lib/libmysql.dll"), package:installdir("bin"))
+            else
+                os.tryrm(package:installdir("lib/libmysql.lib"))
+                os.tryrm(package:installdir("lib/libmysql.dll"))
+            end
+        else
+            if package:config("shared") then
+                os.tryrm(package:installdir("lib/*.a"))
+            else
+                os.tryrm(package:installdir("lib/*.so*"))
+            end
+        end
     end)
 
     on_test(function (package)

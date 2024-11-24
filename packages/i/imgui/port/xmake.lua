@@ -1,21 +1,23 @@
 add_rules("mode.debug", "mode.release")
-set_languages("cxx11")
+add_rules("utils.install.cmake_importfiles")
+set_languages("cxx14")
 
-option("dx9",         {showmenu = true,  default = false})
-option("dx10",        {showmenu = true,  default = false})
-option("dx11",        {showmenu = true,  default = false})
-option("dx12",        {showmenu = true,  default = false})
-option("glfw",        {showmenu = true,  default = false})
-option("opengl2",     {showmenu = true,  default = false})
-option("opengl3",     {showmenu = true,  default = false})
-option("glad",        {showmenu = true,  default = false})
-option("sdl2",        {showmenu = true,  default = false})
-option("sdlrenderer", {showmenu = true,  default = false})
-option("vulkan",      {showmenu = true,  default = false})
-option("win32",       {showmenu = true,  default = false})
-option("freetype",    {showmenu = true,  default = false})
-option("user_config", {showmenu = true,  default = nil, type = "string"})
-option("wchar32",     {showmenu = true,  default = false})
+option("dx9",              {showmenu = true,  default = false})
+option("dx10",             {showmenu = true,  default = false})
+option("dx11",             {showmenu = true,  default = false})
+option("dx12",             {showmenu = true,  default = false})
+option("glfw",             {showmenu = true,  default = false})
+option("opengl2",          {showmenu = true,  default = false})
+option("opengl3",          {showmenu = true,  default = false})
+option("glad",             {showmenu = true,  default = false})
+option("sdl2",             {showmenu = true,  default = false})
+option("sdl2_renderer",    {showmenu = true,  default = false})
+option("vulkan",           {showmenu = true,  default = false})
+option("win32",            {showmenu = true,  default = false})
+option("wgpu",             {showmenu = true,  default = false})
+option("freetype",         {showmenu = true,  default = false})
+option("user_config",      {showmenu = true,  default = nil, type = "string"})
+option("wchar32",          {showmenu = true,  default = false})
 
 if has_config("glfw") then
     add_requires("glfw")
@@ -25,7 +27,7 @@ if has_config("glad") then
     add_requires("glad")
 end
 
-if has_config("sdlrenderer") then
+if has_config("sdl2_renderer") then
     add_requires("libsdl >=2.0.17")
 elseif has_config("sdl2") then
     add_requires("libsdl")
@@ -35,15 +37,23 @@ if has_config("vulkan") then
     add_requires("vulkansdk")
 end
 
+if has_config("wgpu") then
+    add_requires("wgpu-native")
+end
+
 if has_config("freetype") then
     add_requires("freetype")
 end
 
 target("imgui")
-    set_kind("static")
-    add_files("*.cpp")
-    add_headerfiles("*.h")
-    add_includedirs(".")
+    set_kind("$(kind)")
+    add_files("*.cpp", "misc/cpp/*.cpp")
+    add_headerfiles("*.h", "(misc/cpp/*.h)")
+    add_includedirs(".", "misc/cpp")
+
+    if is_kind("shared") and is_plat("windows", "mingw") then
+        add_defines("IMGUI_API=__declspec(dllexport)")
+    end
 
     if has_config("dx9") then
         add_files("backends/imgui_impl_dx9.cpp")
@@ -98,9 +108,14 @@ target("imgui")
         add_packages("libsdl")
     end
 
-    if has_config("sdlrenderer") then
-        add_files("backends/imgui_impl_sdlrenderer.cpp")
-        add_headerfiles("(backends/imgui_impl_sdlrenderer.h)")
+    if has_config("sdl2_renderer") then
+        if os.exists("backends/imgui_impl_sdlrenderer2.cpp") then
+            add_files("backends/imgui_impl_sdlrenderer2.cpp")
+            add_headerfiles("(backends/imgui_impl_sdlrenderer2.h)")
+        else
+            add_files("backends/imgui_impl_sdlrenderer.cpp")
+            add_headerfiles("(backends/imgui_impl_sdlrenderer.h)")
+        end
         add_packages("libsdl")
     end
 
@@ -113,6 +128,12 @@ target("imgui")
     if has_config("win32") then
         add_files("backends/imgui_impl_win32.cpp")
         add_headerfiles("(backends/imgui_impl_win32.h)")
+    end
+
+    if has_config("wgpu") then
+        add_files("backends/imgui_impl_wgpu.cpp")
+        add_headerfiles("(backends/imgui_impl_wgpu.h)")
+        add_packages("wgpu-native")
     end
 
     if has_config("freetype") then

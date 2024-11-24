@@ -1,15 +1,19 @@
 package("libpng")
-
     set_homepage("http://www.libpng.org/pub/png/libpng.html")
     set_description("The official PNG reference library")
     set_license("libpng-2.0")
 
-    set_urls("https://github.com/glennrp/libpng/archive/$(version).zip",
-             "https://github.com/glennrp/libpng.git")
-    add_versions("v1.6.37", "c2c50c13a727af73ecd3fc0167d78592cf5e0bca9611058ca414b6493339c784")
-    add_versions("v1.6.36", "6274d3f761cc80f7f6e2cde6c07bed10c00bc4ddd24c4f86e25eb51affa1664d")
-    add_versions("v1.6.35", "3d22d46c566b1761a0e15ea397589b3a5f36ac09b7c785382e6470156c04247f")
-    add_versions("v1.6.34", "7ffa5eb8f9f3ed23cf107042e5fec28699718916668bbce48b968600475208d3")
+    add_urls("https://github.com/glennrp/libpng/archive/refs/tags/$(version).tar.gz")
+    add_urls("https://github.com/glennrp/libpng.git")
+
+    add_versions("v1.6.44", "0ef5b633d0c65f780c4fced27ff832998e71478c13b45dfb6e94f23a82f64f7c")
+    add_versions("v1.6.43", "fecc95b46cf05e8e3fc8a414750e0ba5aad00d89e9fdf175e94ff041caf1a03a")
+    add_versions("v1.6.42", "fe89de292e223829859d21990d9c4d6b7e30e295a268f6a53a022611aa98bd67")
+    add_versions("v1.6.40", "62d25af25e636454b005c93cae51ddcd5383c40fa14aa3dae8f6576feb5692c2")
+    add_versions("v1.6.37", "ca74a0dace179a8422187671aee97dd3892b53e168627145271cad5b5ac81307")
+    add_versions("v1.6.36", "5bef5a850a9255365a2dc344671b7e9ef810de491bd479c2506ac3c337e2d84f")
+    add_versions("v1.6.35", "6d59d6a154ccbb772ec11772cb8f8beb0d382b61e7ccc62435bf7311c9f4b210")
+    add_versions("v1.6.34", "e45ce5f68b1d80e2cb9a2b601605b374bdf51e1798ef1c2c2bd62131dfcf9eef")
 
     add_deps("zlib")
 
@@ -25,7 +29,7 @@ package("libpng")
         add_extsources("brew::libpng")
     end
 
-    on_install("windows", "mingw", "android", "iphoneos", "cross", "bsd", "wasm", function (package)
+    on_install(function (package)
         io.writefile("xmake.lua", [[
             add_rules("mode.debug", "mode.release")
             add_requires("zlib")
@@ -59,40 +63,12 @@ package("libpng")
                 end
         ]])
         local configs = {}
-        if package:config("shared") then
-            configs.kind = "shared"
-        elseif not package:is_plat("windows", "mingw") and package:config("pic") ~= false then
-            configs.cxflags = "-fPIC"
-        end
         if package:is_plat("android") and package:is_arch("armeabi-v7a") then
             io.replace("arm/filter_neon.S", ".func", ".hidden", {plain = true})
             io.replace("arm/filter_neon.S", ".endfunc", "", {plain = true})
         end
         os.cp("scripts/pnglibconf.h.prebuilt", "pnglibconf.h")
         import("package.tools.xmake").install(package, configs)
-    end)
-
-    on_install("macosx", "linux", function (package)
-        local configs = {}
-        table.insert(configs, "--enable-shared=" .. (package:config("shared") and "yes" or "no"))
-        table.insert(configs, "--enable-static=" .. (package:config("shared") and "no" or "yes"))
-        if package:config("pic") ~= false then
-            table.insert(configs, "--with-pic")
-        end
-        local cppflags = {}
-        local ldflags = {}
-        for _, dep in ipairs(package:orderdeps()) do
-            local fetchinfo = dep:fetch()
-            if fetchinfo then
-                for _, includedir in ipairs(fetchinfo.includedirs or fetchinfo.sysincludedirs) do
-                    table.insert(cppflags, "-I" .. includedir)
-                end
-                for _, linkdir in ipairs(fetchinfo.linkdirs) do
-                    table.insert(ldflags, "-L" .. linkdir)
-                end
-            end
-        end
-        import("package.tools.autoconf").install(package, configs, {cppflags = cppflags, ldflags = ldflags})
     end)
 
     on_test(function (package)

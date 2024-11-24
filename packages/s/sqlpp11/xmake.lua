@@ -2,9 +2,11 @@ package("sqlpp11")
     set_kind("library", {headeronly = true})
     set_homepage("https://github.com/rbock/sqlpp11")
     set_description("A type safe SQL template library for C++")
+    set_license("BSD-2-Clause")
 
     add_urls("https://github.com/rbock/sqlpp11/archive/refs/tags/$(version).tar.gz",
              "https://github.com/rbock/sqlpp11.git")
+    add_versions("0.64", "72e6d37c716cc45b38c3cf4541604f16224aaa3b511d1f1d0be0c49176c3be86")
     add_versions("0.61", "d5a95e28ae93930f7701f517b1342ac14bcf33a9b1c5b5f0dff6aea5e315bb50")
 
     add_deps("cmake")
@@ -14,6 +16,12 @@ package("sqlpp11")
     add_configs("mariadb_connector",    { description = "Enable MariaDB connector.", default = false, type = "boolean"})
     add_configs("postgresql_connector", { description = "Enable PostgreSQL connector.", default = false, type = "boolean"})
     add_configs("mysql_connector",      { description = "Enable MySQL connector.", default = false, type = "boolean"})
+
+    on_load("windows", "linux", "macosx", function (package)
+        if package:config("mysql_connector") then
+            package:add("deps", "mysql")
+        end
+    end)
 
     on_install("windows", "linux", "macosx", function (package)
         local configs = {"-DBUILD_TESTING=OFF"}
@@ -35,6 +43,11 @@ package("sqlpp11")
         -- TODO we need add MySQL deps
         if package:config("mysql_connector") then
             table.insert(configs, "-DBUILD_MYSQL_CONNECTOR=ON")
+            local libmysql = package:dep("mysql"):fetch()
+            if libmysql then
+                table.insert(configs, "-DMySQL_INCLUDE_DIR=" .. table.concat(libmysql.includedirs or libmysql.sysincludedirs, ";"))
+                table.insert(configs, "-DMySQL_LIBRARY=" .. table.concat(libmysql.libfiles or {}, ";"))
+            end
         end
         import("package.tools.cmake").install(package, configs)
     end)

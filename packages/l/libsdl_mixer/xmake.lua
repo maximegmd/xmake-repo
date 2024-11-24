@@ -9,6 +9,7 @@ package("libsdl_mixer")
     add_versions("2.6.0", "aca0ffc96a4bf2a56a16536a269de28e341ce38a46a25180bc1ef75e19b08a3a")
     add_versions("2.6.1", "788c748c1d3a87126511e60995b03526ed4e31e2ba053dffd9dcc8abde97b950")
     add_versions("2.6.2", "61549615a67e731805ca1df553e005be966a625c1d20fb085bf99edeef6e0469")
+    add_versions("2.8.0", "02df784cc68723419dd266530ee6964f810a6f02a27b03ecc85689c2e5e442ce")
 
     if is_plat("mingw") and is_subhost("msys") then
         add_extsources("pacman::SDL2_mixer")
@@ -27,20 +28,34 @@ package("libsdl_mixer")
     end
 
     on_load(function (package)
-        if package:config("shared") then
-            package:add("deps", "libsdl", { configs = { shared = true }})
-        else
-            package:add("deps", "libsdl")
-        end
+        package:add("deps", "libsdl", { configs = { shared = package:config("shared") }})
     end)
 
     on_install(function (package)
-        local configs = {"-DSDL2MIXER_SAMPLES=OFF",
-                         "-DSDL2MIXER_FLAC=OFF",
-                         "-DSDL2MIXER_OPUS=OFF",
-                         "-DSDL2MIXER_MOD=OFF",
-                         "-DSDL2MIXER_MIDI=OFF",
-                         "-DSDL2MIXER_CMD=OFF"}
+        if package:is_plat("wasm") then
+            io.replace("CMakeLists.txt", "sdl_find_sdl2(${sdl2_target_name} ${SDL_REQUIRED_VERSION})", "", {plain = true})
+            io.replace("CMakeLists.txt", "target_link_libraries(SDL2_mixer PRIVATE $<BUILD_INTERFACE:${sdl2_target_name}>)", [[
+target_include_directories(SDL2_mixer PRIVATE ${SDL2_INCLUDE_DIR})
+target_link_libraries(SDL2_mixer PRIVATE $<BUILD_INTERFACE:${SDL2_LIBRARY}>)
+            ]], {plain = true})
+            io.replace("CMakeLists.txt", "target_link_libraries(SDL2_mixer PRIVATE ${sdl2_target_name})", [[
+target_include_directories(SDL2_mixer PRIVATE ${SDL2_INCLUDE_DIR})
+target_link_libraries(SDL2_mixer PRIVATE ${SDL2_LIBRARY})
+            ]], {plain = true})
+        end
+
+        local configs = {
+                            "-DSDL2MIXER_CMD=OFF",
+                            "-DSDL2MIXER_FLAC=OFF",
+                            "-DSDL2MIXER_GME=OFF",
+                            "-DSDL2MIXER_MIDI=OFF",
+                            "-DSDL2MIXER_MOD=OFF",
+                            "-DSDL2MIXER_MP3=ON", -- was on by not being here
+                            "-DSDL2MIXER_OPUS=OFF",
+                            "-DSDL2MIXER_SAMPLES=OFF",
+                            "-DSDL2MIXER_WAVE=ON", -- was on by not being here
+                            "-DSDL2MIXER_WAVPACK=OFF",
+                        }
         table.insert(configs, "-DCMAKE_BUILD_TYPE=" .. (package:debug() and "Debug" or "Release"))
         table.insert(configs, "-DBUILD_SHARED_LIBS=" .. (package:config("shared") and "ON" or "OFF"))
         local libsdl = package:dep("libsdl")
@@ -51,19 +66,31 @@ package("libsdl_mixer")
                 for _, dir in ipairs(fetchinfo.includedirs or fetchinfo.sysincludedirs) do
                     if os.isfile(path.join(dir, "SDL_version.h")) then
                         table.insert(configs, "-DSDL2_INCLUDE_DIR=" .. dir)
-                        break                        
+                        break
                     end
                 end
+                local libfiles = {}
                 for _, libfile in ipairs(fetchinfo.libfiles) do
                     if libfile:match("SDL2%..+$") or libfile:match("SDL2-static%..+$") then
-                        table.insert(configs, "-DSDL2_LIBRARY=" .. table.concat(fetchinfo.libfiles, ";"))
+                        if not (package:config("shared") and libfile:endswith(".dll")) then
+                            table.insert(libfiles, libfile)
+                        end
                     end
                 end
+                table.insert(configs, "-DSDL2_LIBRARY=" .. table.concat(libfiles, ";"))
             end
         end
         import("package.tools.cmake").install(package, configs)
     end)
 
     on_test(function (package)
-        assert(package:has_cfuncs("Mix_Init", {includes = "SDL2/SDL_mixer.h", configs = {defines = "SDL_MAIN_HANDLED"}}))
+        assert(package:check_cxxsnippets({test = [[
+            #include <SDL2/SDL.h>
+            #include <SDL2/SDL_mixer.h>
+            int main(int argc, char** argv) {
+                Mix_Init(MIX_INIT_OGG);
+                Mix_Quit();
+                return 0;
+            }
+        ]]}, {configs = {defines = "SDL_MAIN_HANDLED"}}));
     end)

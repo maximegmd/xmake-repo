@@ -11,10 +11,21 @@ package("glslang")
     add_versions("1.3.231+1", "5755de46b07e4374c05fb1081f65f7ae1f8cca81")
     add_versions("1.3.236+0", "77551c429f86c0e077f26552b7c1c0f12a9f235e")
     add_versions("1.3.239+0", "ca8d07d0bc1c6390b83915700439fa7719de6a2a")
+    add_versions("1.3.246+1", "14e5a04e70057972eef8a40df422e30a3b70e4b5")
+    add_versions("1.3.250+1", "d1517d64cfca91f573af1bf7341dc3a5113349c0")
+    add_versions("1.3.261+1", "76b52ebf77833908dc4c0dd6c70a9c357ac720bd")
+    add_versions("1.3.268+0", "36d08c0d940cf307a23928299ef52c7970d8cee6")
+    add_versions("1.3.275+0", "a91631b260cba3f22858d6c6827511e636c2458a")
+    add_versions("1.3.280+0", "ee2f5d09eaf8f4e8d0d598bd2172fce290d4ca60")
+    add_versions("1.3.283+0", "e8dd0b6903b34f1879520b444634c75ea2deedf5")
+    add_versions("1.3.290+0", "fa9c3deb49e035a8abcabe366f26aac010f6cbfb")
+
+    add_patches("1.3.246+1", "https://github.com/KhronosGroup/glslang/commit/1e4955adbcd9b3f5eaf2129e918ca057baed6520.patch", "47893def550f1684304ef7c49da38f0a8fe35c190a3452d3bf58370b3ee7165d")
 
     add_configs("binaryonly", {description = "Only use binary program.", default = false, type = "boolean"})
     add_configs("exceptions", {description = "Build with exception support.", default = false, type = "boolean"})
     add_configs("rtti",       {description = "Build with RTTI support.", default = false, type = "boolean"})
+    add_configs("default_resource_limits",       {description = "Build with default resource limits.", default = false, type = "boolean"})
     if is_plat("wasm") then
         add_configs("shared", {description = "Build shared library.", default = false, type = "boolean", readonly = true})
     end
@@ -24,6 +35,8 @@ package("glslang")
     if is_plat("linux") then
         add_syslinks("pthread")
     end
+
+    add_defines("ENABLE_HLSL")
 
     on_load(function (package)
         if package:config("binaryonly") then
@@ -46,6 +59,10 @@ package("glslang")
         io.replace("SPIRV/CMakeLists.txt", "target_link_libraries(SPIRV PRIVATE MachineIndependent SPIRV-Tools-opt)", [[
             target_link_libraries(SPIRV PRIVATE MachineIndependent SPIRV-Tools-opt SPIRV-Tools-link SPIRV-Tools-reduce SPIRV-Tools)
         ]], {plain = true})
+        -- glslang will add a debug lib postfix for win32 platform, disable this to fix compilation issues under windows
+        io.replace("CMakeLists.txt", 'set(CMAKE_DEBUG_POSTFIX "d")', [[
+            message(WARNING "Disabled CMake Debug Postfix for xmake package generation")
+        ]], {plain = true})
         if package:is_plat("wasm") then
             -- wasm-ld doesn't support --no-undefined
             io.replace("CMakeLists.txt", [[add_link_options("-Wl,--no-undefined")]], "", {plain = true})
@@ -54,14 +71,29 @@ package("glslang")
         table.insert(configs, "-DCMAKE_BUILD_TYPE=" .. (package:debug() and "Debug" or "Release"))
         if package:is_plat("windows") then
             table.insert(configs, "-DBUILD_SHARED_LIBS=OFF")
+            if package:debug() then
+                table.insert(configs, "-DCMAKE_COMPILE_PDB_OUTPUT_DIRECTORY=''")
+            end
         else
             table.insert(configs, "-DBUILD_SHARED_LIBS=" .. (package:config("shared") and "ON" or "OFF"))
         end
         table.insert(configs, "-DENABLE_EXCEPTIONS=" .. (package:config("exceptions") and "ON" or "OFF"))
         table.insert(configs, "-DENABLE_RTTI=" .. (package:config("rtti") and "ON" or "OFF"))
+        table.insert(configs, "-DALLOW_EXTERNAL_SPIRV_TOOLS=ON")
         import("package.tools.cmake").install(package, configs, {packagedeps = {"spirv-tools"}})
         if not package:config("binaryonly") then
             package:add("links", "glslang", "MachineIndependent", "GenericCodeGen", "OGLCompiler", "OSDependent", "HLSL", "SPIRV", "SPVRemapper")
+        end
+        if package:config("default_resource_limits") then
+            package:add("links", "glslang", "glslang-default-resource-limits")
+        end
+
+        -- https://github.com/KhronosGroup/glslang/releases/tag/12.3.0
+        local bindir = package:installdir("bin")
+        local glslangValidator = path.join(bindir, "glslangValidator" .. (is_host("windows") and ".exe" or ""))
+        if not os.isfile(glslangValidator) then
+            local glslang = path.join(bindir, "glslang" .. (is_host("windows") and ".exe" or ""))
+            os.trycp(glslang, glslangValidator)
         end
     end)
 
@@ -69,6 +101,7 @@ package("glslang")
         if not package:is_cross() then
             os.vrun("glslangValidator --version")
         end
+
         if not package:config("binaryonly") then
             assert(package:has_cxxfuncs("ShInitialize", {configs = {languages = "c++11"}, includes = "glslang/Public/ShaderLang.h"}))
         end
